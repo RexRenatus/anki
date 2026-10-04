@@ -99,6 +99,14 @@ impl TimestampMillis {
     }
 }
 
+// wasm32 patch js-date-clock: std::time::SystemTime::now panics on wasm32-unknown-unknown; the JS Date
+// supplies the same milliseconds since the Unix epoch.
+#[cfg(target_arch = "wasm32")]
+fn elapsed() -> time::Duration {
+    time::Duration::from_millis(js_sys::Date::now() as u64)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn elapsed() -> time::Duration {
     if *crate::PYTHON_UNIT_TESTS {
         // shift clock around rollover time to accommodate Python tests that make bad
