@@ -1,0 +1,4 @@
+node_modules/
+www/pkg/
+test-results/
+playwright-report/

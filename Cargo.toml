@@ -20,6 +20,7 @@ members = [
   "rslib/proto",
   "rslib/sync",
   "tools/minilints",
+  "wasm-spike",
 ]
 resolver = "2"
 

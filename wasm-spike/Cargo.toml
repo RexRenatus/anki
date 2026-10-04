@@ -1,0 +1,27 @@
+[package]
+name = "anki-wasm-spike"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Measuring harness: the engine on wasm32, in a dedicated Worker, over OPFS"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# Every dependency is wasm32-only, so a native workspace build compiles an empty crate.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+anki.workspace = true
+anki_proto.workspace = true
+js-sys = "0.3"
+prost.workspace = true
+serde_json.workspace = true
+# The SQLite that rusqlite links on wasm32; its OS callback drives the OPFS VFS.
+sqlite-wasm-rs = "0.5.5"
+# The OPFS SyncAccessHandle pool VFS, built for the same sqlite-wasm-rs line.
+sqlite-wasm-vfs = "0.2"
+wasm-bindgen = "0.2.129"
+# Exported async functions resolve as JS promises.
+wasm-bindgen-futures = "0.4"
