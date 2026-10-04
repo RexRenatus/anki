@@ -102,7 +102,6 @@ strum.workspace = true
 tempfile.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
-tracing-appender.workspace = true
 tracing-subscriber.workspace = true
 unic-ucd-category.workspace = true
 unicase.workspace = true
@@ -125,6 +124,9 @@ tower-http.workspace = true
 tokio.workspace = true
 # single-thread-zstd: zstd's zstdmt, which needs pthreads.
 zstd.workspace = true
+# native-only-log-file: tracing-appender, whose rolling module calls symlink functions wasm32
+# lacks; a browser has no log file.
+tracing-appender.workspace = true
 
 # What a wasm32 build takes instead. Each group names the patch that added it.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
