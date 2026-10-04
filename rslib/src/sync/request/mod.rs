@@ -2,6 +2,8 @@
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 pub mod header_and_stream;
+// wasm32 patch native-only-sync-server: parses a legacy multipart request on the server; native-only.
+#[cfg(not(target_arch = "wasm32"))]
 mod multipart;
 
 use std::any::Any;
@@ -10,14 +12,23 @@ use std::marker::PhantomData;
 use std::net::IpAddr;
 use std::sync::LazyLock;
 
+#[cfg(not(target_arch = "wasm32"))]
 use axum::body::Body;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::extract::FromRequest;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::extract::Multipart;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::http::Request;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::http::StatusCode;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::RequestPartsExt;
+#[cfg(not(target_arch = "wasm32"))]
 use axum_client_ip::ClientIp;
+#[cfg(not(target_arch = "wasm32"))]
 use axum_extra::TypedHeader;
+#[cfg(not(target_arch = "wasm32"))]
 use header_and_stream::SyncHeader;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -100,6 +111,8 @@ where
     }
 }
 
+// wasm32 patch native-only-sync-server: the server extractor (client ip, typed header, multipart); native-only.
+#[cfg(not(target_arch = "wasm32"))]
 impl<S, T> FromRequest<S> for SyncRequest<T>
 where
     S: Send + Sync,

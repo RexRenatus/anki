@@ -4,6 +4,8 @@
 pub mod collection;
 pub mod error;
 pub mod http_client;
+// wasm32 patch native-only-sync-server: the in-crate sync server is native-only.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod http_server;
 pub mod login;
 pub mod media;

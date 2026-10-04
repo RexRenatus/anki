@@ -3,10 +3,17 @@
 
 use std::marker::PhantomData;
 
+#[cfg(not(target_arch = "wasm32"))]
 use axum::body::Body;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::IntoResponse;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::Response;
+#[cfg(not(target_arch = "wasm32"))]
 use axum_extra::headers::HeaderName;
+// wasm32 patch native-only-sync-server: the same http::HeaderName, reached through reqwest.
+#[cfg(target_arch = "wasm32")]
+use reqwest::header::HeaderName;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -14,7 +21,9 @@ use crate::prelude::*;
 use crate::sync::collection::upload::UploadResponse;
 use crate::sync::error::HttpResult;
 use crate::sync::error::OrHttpErr;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::sync::request::header_and_stream::encode_zstd_body;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::sync::version::SyncVersion;
 
 pub static ORIGINAL_SIZE: HeaderName = HeaderName::from_static("anki-original-size");
@@ -36,6 +45,8 @@ impl<T> SyncResponse<T> {
         }
     }
 
+    // wasm32 patch native-only-sync-server: builds a server response; native-only with the server.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn make_response(self, sync_version: SyncVersion) -> Response {
         if sync_version.is_zstd() {
             let header = (&ORIGINAL_SIZE, self.data.len().to_string());

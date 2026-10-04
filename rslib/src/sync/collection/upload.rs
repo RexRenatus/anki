@@ -7,7 +7,9 @@ use std::io::Write;
 use anki_io::atomic_rename;
 use anki_io::new_tempfile_in_parent_of;
 use anki_io::write_file;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::IntoResponse;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::Response;
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -101,6 +103,8 @@ pub fn handle_received_upload(
     Ok(UploadResponse::Ok)
 }
 
+// wasm32 patch native-only-sync-server: a server response; native-only with the server.
+#[cfg(not(target_arch = "wasm32"))]
 impl IntoResponse for UploadResponse {
     fn into_response(self) -> Response {
         match self {

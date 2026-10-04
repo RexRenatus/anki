@@ -7,13 +7,22 @@ use std::io::ErrorKind;
 use std::marker::PhantomData;
 use std::net::IpAddr;
 
+#[cfg(not(target_arch = "wasm32"))]
 use axum::http::StatusCode;
+#[cfg(not(target_arch = "wasm32"))]
 use axum_extra::headers::Header;
+#[cfg(not(target_arch = "wasm32"))]
 use axum_extra::headers::HeaderName;
+#[cfg(not(target_arch = "wasm32"))]
 use axum_extra::headers::HeaderValue;
+// wasm32 patch native-only-sync-server: the same http types, reached through reqwest.
 use bytes::Bytes;
 use futures::Stream;
 use futures::TryStreamExt;
+#[cfg(target_arch = "wasm32")]
+use reqwest::header::HeaderName;
+#[cfg(target_arch = "wasm32")]
+use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
@@ -128,6 +137,8 @@ pub struct SyncHeader {
 
 pub static SYNC_HEADER_NAME: HeaderName = HeaderName::from_static("anki-sync");
 
+// wasm32 patch native-only-sync-server: the server decodes this header; native-only.
+#[cfg(not(target_arch = "wasm32"))]
 impl Header for SyncHeader {
     fn name() -> &'static HeaderName {
         &SYNC_HEADER_NAME

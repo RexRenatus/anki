@@ -50,9 +50,6 @@ anki_io.workspace = true
 anki_proto.workspace = true
 async-compression.workspace = true
 async-trait.workspace = true
-axum.workspace = true
-axum-client-ip.workspace = true
-axum-extra.workspace = true
 bitflags.workspace = true
 blake3.workspace = true
 bytes.workspace = true
@@ -72,7 +69,6 @@ fsrs.workspace = true
 futures.workspace = true
 hex.workspace = true
 htmlescape.workspace = true
-hyper.workspace = true
 id_tree.workspace = true
 itertools.workspace = true
 nom.workspace = true
@@ -106,7 +102,6 @@ strum.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
-tower-http.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true
 tracing-subscriber.workspace = true
@@ -118,3 +113,13 @@ zstd.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows.workspace = true
+
+# Dependencies a wasm32 build cannot take. Each group names the DeckStreak fork patch
+# that moved it here; resolver 2 keeps their features off a wasm32 build.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# native-only-sync-server: the in-crate sync server.
+axum.workspace = true
+axum-client-ip.workspace = true
+axum-extra.workspace = true
+hyper.workspace = true
+tower-http.workspace = true

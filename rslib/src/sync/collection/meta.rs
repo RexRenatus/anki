@@ -3,7 +3,11 @@
 
 use ammonia::Url;
 use anki_io::metadata;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::http::StatusCode;
+// wasm32 patch native-only-sync-server: the same http::StatusCode, reached through reqwest.
+#[cfg(target_arch = "wasm32")]
+use reqwest::StatusCode;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
