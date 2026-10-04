@@ -108,7 +108,6 @@ unic-ucd-category.workspace = true
 unicase.workspace = true
 unicode-normalization.workspace = true
 zip.workspace = true
-zstd.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows.workspace = true
@@ -124,8 +123,12 @@ hyper.workspace = true
 tower-http.workspace = true
 # current-thread-runtime: tokio's multi-thread runtime, fs, net and signal features.
 tokio.workspace = true
+# single-thread-zstd: zstd's zstdmt, which needs pthreads.
+zstd.workspace = true
 
 # What a wasm32 build takes instead. Each group names the patch that added it.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # current-thread-runtime: tokio's wasm32 subset, with no fs, net, signal or multi-thread runtime.
 tokio = { version = "1.45", default-features = false, features = ["macros", "rt", "sync", "time", "io-util"] }
+# single-thread-zstd: zstd without zstdmt, compressing on one thread.
+zstd = { version = "0.13.3" }
