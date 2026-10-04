@@ -16,3 +16,8 @@ rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld"
+
+# wasm32 spike: one getrandom line selects its JS backend only through this cfg (its `wasm_js`
+# feature alone is not enough). Native targets are unaffected.
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", 'getrandom_backend="wasm_js"']

@@ -3,7 +3,9 @@
 use std::collections::HashMap;
 
 use anki_proto::generic;
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::IntoParallelIterator;
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::ParallelIterator;
 
 use crate::collection::Collection;
@@ -137,8 +139,13 @@ impl crate::services::DeckConfigService for Collection {
 
         config.deck_size = guard.cards;
 
-        let costs = (70u32..=99u32)
-            .into_par_iter()
+        let retentions = 70u32..=99u32;
+        #[cfg(not(target_arch = "wasm32"))]
+        let retentions = retentions.into_par_iter();
+        // wasm32 spike: rayon has no thread pool here; the same work runs in sequence.
+        #[cfg(target_arch = "wasm32")]
+        let retentions = retentions.into_iter();
+        let costs = retentions
             .map(|dr| {
                 Ok((
                     dr,

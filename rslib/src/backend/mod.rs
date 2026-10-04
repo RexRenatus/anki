@@ -130,11 +130,14 @@ impl Backend {
     fn runtime_handle(&self) -> runtime::Handle {
         self.runtime
             .get_or_init(|| {
-                runtime::Builder::new_multi_thread()
-                    .worker_threads(1)
-                    .enable_all()
-                    .build()
-                    .unwrap()
+                #[cfg(not(target_arch = "wasm32"))]
+                let mut builder = runtime::Builder::new_multi_thread();
+                #[cfg(not(target_arch = "wasm32"))]
+                builder.worker_threads(1);
+                // wasm32 spike: tokio has no multi-thread runtime here; a current-thread one.
+                #[cfg(target_arch = "wasm32")]
+                let mut builder = runtime::Builder::new_current_thread();
+                builder.enable_all().build().unwrap()
             })
             .handle()
             .clone()
@@ -178,7 +181,13 @@ impl Backend {
         let mut web_client = self.web_client.lock().unwrap();
 
         web_client
-            .get_or_insert_with(|| Client::builder().http1_only().build().unwrap())
+            .get_or_insert_with(|| {
+                let builder = Client::builder();
+                #[cfg(not(target_arch = "wasm32"))]
+                let builder = builder.http1_only();
+                // wasm32 spike: the browser's fetch chooses the protocol; no http1_only here.
+                builder.build().unwrap()
+            })
             .clone()
     }
 

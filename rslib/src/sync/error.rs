@@ -5,10 +5,17 @@ use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
+#[cfg(not(target_arch = "wasm32"))]
 use axum::http::StatusCode;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::IntoResponse;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::Redirect;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::Response;
+// wasm32 spike: the same http::StatusCode, reached through reqwest when axum is absent.
+#[cfg(target_arch = "wasm32")]
+use reqwest::StatusCode;
 
 pub type HttpResult<T, E = HttpError> = Result<T, E>;
 
@@ -49,6 +56,8 @@ impl HttpError {
     }
 }
 
+// wasm32 spike: a server response; native-only with the server.
+#[cfg(not(target_arch = "wasm32"))]
 impl IntoResponse for HttpError {
     fn into_response(self) -> Response {
         let HttpError {

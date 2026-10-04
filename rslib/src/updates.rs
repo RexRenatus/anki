@@ -7,6 +7,7 @@ use anki_io::create_dir_all;
 use anki_io::remove_file;
 use futures::StreamExt;
 use sha2::Digest;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::io::AsyncWriteExt;
 
 use crate::error::AnkiError;
@@ -64,6 +65,19 @@ pub fn reqwest_error_to_anki_error(err: reqwest::Error) -> AnkiError {
     }
 }
 
+// wasm32 spike: the desktop updater writes through tokio fs, which wasm32 lacks.
+#[cfg(target_arch = "wasm32")]
+pub async fn download_file(
+    _client: &reqwest::Client,
+    _progress: &mut ThrottlingProgressHandler<DownloadUpdateProgress>,
+    _filename: &str,
+    _url: &str,
+    _checksum: &str,
+) -> Result<PathBuf> {
+    crate::invalid_input!("downloading updates is not available on wasm32")
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn download_file(
     client: &reqwest::Client,
     progress: &mut ThrottlingProgressHandler<DownloadUpdateProgress>,
