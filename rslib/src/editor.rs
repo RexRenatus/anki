@@ -60,9 +60,16 @@ async fn download_local_file(url: &str) -> Result<(Vec<u8>, Option<String>)> {
         Err(e) => invalid_input!("Invalid file URL: {}", e),
     };
 
+    #[cfg(not(target_arch = "wasm32"))]
     let file_path = match parsed_url.to_file_path() {
         Ok(path) => path,
         Err(_) => invalid_input!("Invalid file path in URL"),
+    };
+    // wasm32 patch browser-fetch: url's to_file_path exists only where a local file system does.
+    #[cfg(target_arch = "wasm32")]
+    let file_path: std::path::PathBuf = {
+        let _ = parsed_url;
+        invalid_input!("file URLs are not available on wasm32")
     };
 
     let file_contents = std::fs::read(&file_path).map_err(|e| AnkiError::FileIoError {
@@ -77,8 +84,11 @@ async fn download_local_file(url: &str) -> Result<(Vec<u8>, Option<String>)> {
 }
 
 async fn download_remote_file(url: &str) -> Result<(Vec<u8>, Option<String>)> {
-    let client = Client::builder()
-        .timeout(Duration::from_secs(30))
+    let builder = Client::builder();
+    #[cfg(not(target_arch = "wasm32"))]
+    let builder = builder.timeout(Duration::from_secs(30));
+    // wasm32 patch browser-fetch: reqwest's fetch backend has no client-wide timeout; the browser's applies.
+    let client = builder
         .user_agent("Mozilla/5.0 (compatible; Anki)")
         .build()?;
 

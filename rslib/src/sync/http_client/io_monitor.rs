@@ -98,8 +98,25 @@ impl IoMonitor {
         }
     }
 
+    /// wasm32 patch browser-fetch: the streamed request body (reqwest's Body::wrap_stream) and the Send bounds
+    /// on the response stream exist on native targets only, so the sync transport is refused.
+    #[cfg(target_arch = "wasm32")]
+    pub async fn zstd_request_with_timeout(
+        &self,
+        _request: RequestBuilder,
+        _request_body: Vec<u8>,
+        _stall_duration: Duration,
+    ) -> HttpResult<Vec<u8>> {
+        Err(HttpError {
+            code: StatusCode::NOT_IMPLEMENTED,
+            context: "sync transport is not available on wasm32".into(),
+            source: None,
+        })
+    }
+
     /// Takes care of encoding provided request data and setting content type to
     /// binary, and returns the decompressed response body.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn zstd_request_with_timeout(
         &self,
         request: RequestBuilder,

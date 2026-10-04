@@ -181,7 +181,13 @@ impl Backend {
         let mut web_client = self.web_client.lock().unwrap();
 
         web_client
-            .get_or_insert_with(|| Client::builder().http1_only().build().unwrap())
+            .get_or_insert_with(|| {
+                let builder = Client::builder();
+                #[cfg(not(target_arch = "wasm32"))]
+                let builder = builder.http1_only();
+                // wasm32 patch browser-fetch: the browser's fetch chooses the protocol; no http1_only here.
+                builder.build().unwrap()
+            })
             .clone()
     }
 
