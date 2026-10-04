@@ -15,7 +15,9 @@ use fsrs::SimulatorConfig;
 use fsrs::FSRS;
 use itertools::Itertools;
 use rand::Rng;
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::IntoParallelIterator;
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::ParallelIterator;
 
 use crate::card::CardQueue;
@@ -282,8 +284,13 @@ impl Collection {
         req: SimulateFsrsReviewRequest,
     ) -> Result<SimulateFsrsWorkloadResponse> {
         let (config, cards) = self.simulate_request_to_config(&req)?;
-        let dr_workload = (70u32..=99u32)
-            .into_par_iter()
+        let retentions = 70u32..=99u32;
+        #[cfg(not(target_arch = "wasm32"))]
+        let retentions = retentions.into_par_iter();
+        // wasm32 patch sequential-rayon: rayon has no thread pool here; the same work runs in sequence.
+        #[cfg(target_arch = "wasm32")]
+        let retentions = retentions.into_iter();
+        let dr_workload = retentions
             .map(|dr| {
                 let cards = cards
                     .iter()
