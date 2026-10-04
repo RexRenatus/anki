@@ -130,11 +130,14 @@ impl Backend {
     fn runtime_handle(&self) -> runtime::Handle {
         self.runtime
             .get_or_init(|| {
-                runtime::Builder::new_multi_thread()
-                    .worker_threads(1)
-                    .enable_all()
-                    .build()
-                    .unwrap()
+                #[cfg(not(target_arch = "wasm32"))]
+                let mut builder = runtime::Builder::new_multi_thread();
+                #[cfg(not(target_arch = "wasm32"))]
+                builder.worker_threads(1);
+                // wasm32 patch current-thread-runtime: tokio has no multi-thread runtime here.
+                #[cfg(target_arch = "wasm32")]
+                let mut builder = runtime::Builder::new_current_thread();
+                builder.enable_all().build().unwrap()
             })
             .handle()
             .clone()
