@@ -159,9 +159,10 @@ impl crate::services::BackendSyncService for Backend {
         &self,
         _input: anki_proto::generic::String,
     ) -> Result<anki_proto::generic::Bool> {
-        #[cfg(feature = "rustls")]
+        #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
         return Ok(self.set_custom_certificate_inner(_input.val).is_ok().into());
-        #[cfg(not(feature = "rustls"))]
+        // wasm32 patch browser-tls: no custom certificate on wasm32; the browser's trust store.
+        #[cfg(not(all(feature = "rustls", not(target_arch = "wasm32"))))]
         return Ok(false.into());
     }
 }

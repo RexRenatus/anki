@@ -143,7 +143,9 @@ impl Backend {
             .clone()
     }
 
-    #[cfg(feature = "rustls")]
+    // wasm32 patch browser-tls: the browser's fetch owns TLS and its trust store; reqwest's
+    // wasm32 backend has no rustls and no root certificates to add.
+    #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
     fn set_custom_certificate_inner(&self, cert_str: String) -> Result<()> {
         use std::io::Cursor;
         use std::io::Read;
