@@ -135,3 +135,6 @@ zstd = { version = "0.13.3" }
 # js-date-clock: the wall clock and the local offset from the JS Date, where SystemTime panics.
 chrono = { version = "0.4.41", default-features = false, features = ["std", "clock", "wasmbind"] }
 js-sys = "0.3"
+# getrandom-wasm-js: randomness from crypto.getRandomValues for both getrandom lines.
+getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+getrandom_04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
