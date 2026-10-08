@@ -2,6 +2,8 @@
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 use ammonia::Url;
+// wasm32 patch wasm-collection-size: the collection's size is read from SQLite on wasm32.
+#[cfg(not(target_arch = "wasm32"))]
 use anki_io::metadata;
 #[cfg(not(target_arch = "wasm32"))]
 use axum::http::StatusCode;
@@ -132,7 +134,17 @@ pub struct MetaRequest {
 impl Collection {
     pub fn sync_meta(&self) -> Result<SyncMeta> {
         let stamps = self.storage.get_collection_timestamps()?;
+        #[cfg(not(target_arch = "wasm32"))]
         let collection_bytes = metadata(&self.col_path)?.len();
+        // wasm32 patch wasm-collection-size: the browser gives the engine no file system, so the
+        // open collection's size is its SQLite page count times its page size.
+        #[cfg(target_arch = "wasm32")]
+        let collection_bytes = {
+            let db = &self.storage.db;
+            let pages: u64 = db.pragma_query_value(None, "page_count", |row| row.get(0))?;
+            let page_size: u64 = db.pragma_query_value(None, "page_size", |row| row.get(0))?;
+            pages * page_size
+        };
         Ok(SyncMeta {
             modified: stamps.collection_change,
             schema: stamps.schema_change,
