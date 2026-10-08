@@ -213,10 +213,37 @@ impl NetworkError {
     }
 }
 
+/// wasm32 patch browser-xhr: the status a server answered a browser request with. A browser
+/// request has no reqwest error to carry its status, so this source carries it to
+/// `error_for_status_code`; a source-less status is never mapped that way.
+#[cfg(target_arch = "wasm32")]
+#[derive(Debug)]
+pub(crate) struct BrowserStatus(pub(crate) StatusCode);
+
+#[cfg(target_arch = "wasm32")]
+impl std::fmt::Display for BrowserStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "answered with status {}", self.0.as_u16())
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl std::error::Error for BrowserStatus {}
+
 // This needs rethinking; we should be attaching error context as errors are
 // encountered instead of trying to determine the problem later.
 impl From<HttpError> for AnkiError {
     fn from(err: HttpError) -> Self {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(status) = err
+                .source
+                .as_ref()
+                .and_then(|source| source.downcast_ref::<BrowserStatus>())
+            {
+                return error_for_status_code(err.to_string(), status.0);
+            }
+        }
         if let Some(reqwest_error) = err
             .source
             .as_ref()

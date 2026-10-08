@@ -25,6 +25,8 @@ use tokio_util::io::ReaderStream;
 use tokio_util::io::StreamReader;
 
 use crate::error::Result;
+// wasm32 patch browser-xhr: the wasm32 request builds no HttpError here.
+#[cfg(not(target_arch = "wasm32"))]
 use crate::sync::error::HttpError;
 use crate::sync::error::HttpResult;
 use crate::sync::error::OrHttpErr;
@@ -99,19 +101,17 @@ impl IoMonitor {
     }
 
     /// wasm32 patch browser-fetch: the streamed request body (reqwest's Body::wrap_stream) and the Send bounds
-    /// on the response stream exist on native targets only, so the sync transport is refused.
+    /// on the response stream exist on native targets only, so the streamed transport is not used here.
+    /// wasm32 patch browser-xhr: the request is a synchronous XMLHttpRequest from the dedicated Worker
+    /// instead, its body encoded in memory and its stall duration the request's timeout.
     #[cfg(target_arch = "wasm32")]
     pub async fn zstd_request_with_timeout(
         &self,
-        _request: RequestBuilder,
-        _request_body: Vec<u8>,
-        _stall_duration: Duration,
+        request: RequestBuilder,
+        request_body: Vec<u8>,
+        stall_duration: Duration,
     ) -> HttpResult<Vec<u8>> {
-        Err(HttpError {
-            code: StatusCode::NOT_IMPLEMENTED,
-            context: "sync transport is not available on wasm32".into(),
-            source: None,
-        })
+        super::xhr_request(request, request_body, stall_duration)
     }
 
     /// Takes care of encoding provided request data and setting content type to

@@ -143,6 +143,7 @@ dependencies = [
  "unic-ucd-category",
  "unicase",
  "unicode-normalization",
+ "web-sys",
  "windows",
  "wiremock",
  "zip",
