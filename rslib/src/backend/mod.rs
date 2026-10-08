@@ -137,7 +137,13 @@ impl Backend {
                 // wasm32 patch current-thread-runtime: tokio has no multi-thread runtime here.
                 #[cfg(target_arch = "wasm32")]
                 let mut builder = runtime::Builder::new_current_thread();
-                builder.enable_all().build().unwrap()
+                #[cfg(not(target_arch = "wasm32"))]
+                let runtime = builder.enable_all().build();
+                // wasm32 patch wasm-clock-threads: no driver is enabled, because tokio has no time
+                // driver on wasm32-unknown-unknown, where a timer panics.
+                #[cfg(target_arch = "wasm32")]
+                let runtime = builder.build();
+                runtime.unwrap()
             })
             .handle()
             .clone()

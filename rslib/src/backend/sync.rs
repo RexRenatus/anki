@@ -186,6 +186,18 @@ impl Backend {
         Ok((guard, abort_reg))
     }
 
+    /// wasm32 patch wasm-clock-threads: the browser gives the engine no thread, so a media sync in
+    /// the background refuses.
+    #[cfg(target_arch = "wasm32")]
+    pub(super) fn sync_media_in_background(
+        &self,
+        _auth: SyncAuth,
+        _server_usn: Option<Usn>,
+    ) -> Result<()> {
+        invalid_input!("a media sync in the background is not available on wasm32")
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn sync_media_in_background(
         &self,
         auth: SyncAuth,
@@ -237,6 +249,9 @@ impl Backend {
         Ok(MediaSyncStatusResponse { active, progress })
     }
 
+    // wasm32 patch wasm-clock-threads: only the background media sync runs this, and it refuses on
+    // wasm32.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn sync_media_blocking(
         &self,
         auth: SyncAuth,
@@ -373,9 +388,14 @@ impl Backend {
                     // if the user aborted, we'll need to clean up the transaction
                     col.storage.rollback_trx()?;
                     // and tell AnkiWeb to clean up
+                    #[cfg(not(target_arch = "wasm32"))]
                     let _handle = std::thread::spawn(move || {
                         let _ = rt.block_on(sync_abort(auth, client));
                     });
+                    // wasm32 patch wasm-clock-threads: the browser gives the engine no thread, so
+                    // the abort is sent inline.
+                    #[cfg(target_arch = "wasm32")]
+                    let _ = rt.block_on(sync_abort(auth, client));
 
                     Err(AnkiError::Interrupted)
                 }

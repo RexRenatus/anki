@@ -19,7 +19,11 @@ use reqwest::Response;
 use reqwest::StatusCode;
 use tokio::io::AsyncReadExt;
 use tokio::select;
+// wasm32 patch wasm-clock-threads: IoMonitor reads no clock on wasm32, where tokio has no time
+// driver and the standard library's clock traps.
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::interval;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::Instant;
 use tokio_util::io::ReaderStream;
 use tokio_util::io::StreamReader;
@@ -44,6 +48,7 @@ pub struct IoMonitor(pub Arc<Mutex<IoMonitorInner>>);
 impl IoMonitor {
     pub fn new() -> Self {
         Self(Arc::new(Mutex::new(IoMonitorInner {
+            #[cfg(not(target_arch = "wasm32"))]
             last_activity: Instant::now(),
             bytes_sent: 0,
             total_bytes_to_send: 0,
@@ -65,7 +70,10 @@ impl IoMonitor {
         let inner = self.0.clone();
         {
             let mut inner = inner.lock().unwrap();
-            inner.last_activity = Instant::now();
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                inner.last_activity = Instant::now();
+            }
             if sending {
                 inner.total_bytes_to_send += total_bytes
             } else {
@@ -75,7 +83,10 @@ impl IoMonitor {
         stream.map(move |res| match res {
             Ok(bytes) => {
                 let mut inner = inner.lock().unwrap();
-                inner.last_activity = Instant::now();
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    inner.last_activity = Instant::now();
+                }
                 if sending {
                     inner.bytes_sent += bytes.len() as u32;
                 } else {
@@ -88,6 +99,7 @@ impl IoMonitor {
     }
 
     /// Returns if no I/O activity observed for `stall_time`.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn timeout(&self, stall_time: Duration) {
         let poll_interval = Duration::from_millis(if cfg!(test) { 10 } else { 1000 });
         let mut interval = interval(poll_interval);
@@ -191,6 +203,7 @@ fn map_redirect_to_error(resp: &Response) -> HttpResult<()> {
 
 #[derive(Debug)]
 pub struct IoMonitorInner {
+    #[cfg(not(target_arch = "wasm32"))]
     last_activity: Instant,
     pub bytes_sent: u32,
     pub total_bytes_to_send: u32,
