@@ -1,6 +1,8 @@
 // Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+// wasm32 patch browser-full-sync-files: an upload reads the collection through SQLite on wasm32.
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 use std::io::Write;
 
@@ -46,7 +48,11 @@ impl Collection {
         let col_path = self.col_path.clone();
         let progress = self.new_progress_handler();
         self.close(Some(SchemaVersion::V18))?;
+        #[cfg(not(target_arch = "wasm32"))]
         let col_data = fs::read(&col_path)?;
+        // wasm32 patch browser-full-sync-files: the browser gives the engine no file system.
+        #[cfg(target_arch = "wasm32")]
+        let col_data = serialized_collection(&col_path)?;
 
         let total_bytes = col_data.len();
         if server.endpoint.as_str().contains("ankiweb") {
@@ -67,6 +73,17 @@ impl Collection {
             }
         }
     }
+}
+
+/// wasm32 patch browser-full-sync-files: the browser gives the engine no file system, so the closed
+/// collection at `col_path` is read whole through SQLite's serialize, from the file system the web
+/// engine installs as SQLite's default. The lock is exclusive, as the collection's own is.
+#[cfg(target_arch = "wasm32")]
+fn serialized_collection(col_path: &std::path::Path) -> Result<Vec<u8>> {
+    let db = rusqlite::Connection::open(col_path)?;
+    db.pragma_update(None, "locking_mode", "exclusive")?;
+    let data = db.serialize(rusqlite::MAIN_DB)?;
+    Ok(data.to_vec())
 }
 
 /// Collection must already be open, and will be replaced on success.

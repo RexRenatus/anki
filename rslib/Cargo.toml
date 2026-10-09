@@ -142,3 +142,6 @@ getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] 
 getrandom_04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
 # browser-xhr: the sync request as a synchronous XMLHttpRequest from the dedicated Worker.
 web-sys = { version = "0.3", features = ["XmlHttpRequest", "XmlHttpRequestResponseType"] }
+# browser-full-sync-files: SQLite's serialize and backup, which move a full sync's collection where
+# the browser gives the engine no file system.
+rusqlite = { workspace = true, features = ["serialize", "backup"] }

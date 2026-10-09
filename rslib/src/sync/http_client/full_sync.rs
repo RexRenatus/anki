@@ -27,6 +27,10 @@ impl HttpSyncClient {
         let io_monitor = IoMonitor::new();
         let io_monitor2 = io_monitor.clone();
         let update_progress = async move {
+            // wasm32 patch browser-full-sync-files: tokio has no time driver on
+            // wasm32-unknown-unknown, where a timer panics, so the progress monitor never ticks.
+            #[cfg(target_arch = "wasm32")]
+            std::future::pending::<()>().await;
             let mut interval = interval(Duration::from_millis(100));
             loop {
                 interval.tick().await;
