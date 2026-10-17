@@ -151,7 +151,7 @@ fn collection_to_tempfile(meta: &Meta, archive: &mut ZipArchive<File>) -> Result
     meta.copy(&mut zip_file, &mut tempfile)
         .with_context(|_| FileIoSnafu {
             path: tempfile.path(),
-            op: FileOp::copy(zip_file.name()),
+            op: FileOp::copy(zip_file.name().unwrap_or_default().into_owned()),
         })?;
 
     Ok(tempfile)
