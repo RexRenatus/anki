@@ -133,7 +133,7 @@ tracing-appender.workspace = true
 # current-thread-runtime: tokio's wasm32 subset, with no fs, net, signal or multi-thread runtime.
 tokio = { version = "1.45", default-features = false, features = ["macros", "rt", "sync", "time", "io-util"] }
 # single-thread-zstd: zstd without zstdmt, compressing on one thread.
-zstd = { version = "0.13.3" }
+zstd = { version = "0.14.3" }
 # js-date-clock: the wall clock and the local offset from the JS Date, where SystemTime panics.
 chrono = { version = "0.4.41", default-features = false, features = ["std", "clock", "wasmbind"] }
 js-sys = "0.3"
