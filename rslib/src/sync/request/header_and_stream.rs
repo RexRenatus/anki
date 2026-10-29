@@ -8,13 +8,11 @@ use std::marker::PhantomData;
 use std::net::IpAddr;
 
 #[cfg(not(target_arch = "wasm32"))]
+use axum::http::HeaderName;
+#[cfg(not(target_arch = "wasm32"))]
+use axum::http::HeaderValue;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::http::StatusCode;
-#[cfg(not(target_arch = "wasm32"))]
-use axum_extra::headers::Header;
-#[cfg(not(target_arch = "wasm32"))]
-use axum_extra::headers::HeaderName;
-#[cfg(not(target_arch = "wasm32"))]
-use axum_extra::headers::HeaderValue;
 // wasm32 patch native-only-sync-server: the same http types, reached through reqwest.
 use bytes::Bytes;
 use futures::Stream;
@@ -139,24 +137,12 @@ pub static SYNC_HEADER_NAME: HeaderName = HeaderName::from_static("anki-sync");
 
 // wasm32 patch native-only-sync-server: the server decodes this header; native-only.
 #[cfg(not(target_arch = "wasm32"))]
-impl Header for SyncHeader {
-    fn name() -> &'static HeaderName {
-        &SYNC_HEADER_NAME
-    }
-
-    fn decode<'i, I>(values: &mut I) -> Result<Self, axum_extra::headers::Error>
-    where
-        Self: Sized,
-        I: Iterator<Item = &'i HeaderValue>,
-    {
-        values
-            .next()
-            .and_then(|value| value.to_str().ok())
-            .and_then(|s| serde_json::from_str(s).ok())
-            .ok_or_else(axum_extra::headers::Error::invalid)
-    }
-
-    fn encode<E: Extend<HeaderValue>>(&self, _values: &mut E) {
-        todo!()
+impl SyncHeader {
+    /// Decodes the first `anki-sync` header value: visible ASCII holding the
+    /// header's JSON.
+    pub(super) fn decode(
+        value: &HeaderValue,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(serde_json::from_str(value.to_str()?)?)
     }
 }

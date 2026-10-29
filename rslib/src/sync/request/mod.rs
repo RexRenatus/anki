@@ -27,9 +27,9 @@ use axum::RequestPartsExt;
 #[cfg(not(target_arch = "wasm32"))]
 use axum_client_ip::ClientIp;
 #[cfg(not(target_arch = "wasm32"))]
-use axum_extra::TypedHeader;
-#[cfg(not(target_arch = "wasm32"))]
 use header_and_stream::SyncHeader;
+#[cfg(not(target_arch = "wasm32"))]
+use header_and_stream::SYNC_HEADER_NAME;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Error;
@@ -132,11 +132,15 @@ where
             .0;
         Span::current().record("ip", ip.to_string());
 
-        let sync_header: Option<TypedHeader<SyncHeader>> =
-            parts.extract().await.or_bad_request("bad sync header")?;
+        let sync_header = parts
+            .headers
+            .get(&SYNC_HEADER_NAME)
+            .map(SyncHeader::decode)
+            .transpose()
+            .or_bad_request("bad sync header")?;
         let req = Request::from_parts(parts, body);
 
-        if let Some(TypedHeader(sync_header)) = sync_header {
+        if let Some(sync_header) = sync_header {
             let stream = Body::from_request(req, state)
                 .await
                 .expect("infallible")

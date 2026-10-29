@@ -117,7 +117,6 @@ windows.workspace = true
 # native-only-sync-server: the in-crate sync server.
 axum.workspace = true
 axum-client-ip.workspace = true
-axum-extra.workspace = true
 hyper.workspace = true
 tower-http.workspace = true
 # current-thread-runtime: tokio's multi-thread runtime, fs, net and signal features.

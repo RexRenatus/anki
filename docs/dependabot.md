@@ -70,7 +70,7 @@ Worked example: [RUSTSEC-2026-0258](https://github.com/ankitects/anki/issues/536
 
 1. Open the `RUSTSEC-…` advisory and note the crate and patched versions.
 2. See whether Dependabot already opened a security PR that bumps a crate we depend on directly. If CI is green, merge it.
-3. If the crate is **transitive through a git dep** (`linkcheck`, `percent-encoding-iri`, …):
+3. If the crate is **transitive through a git dep** (`percent-encoding-iri`, …):
     - Land the bump in the fork.
     - Point `Cargo.toml` at the new `rev`.
     - Run `cargo update -p <crate>` (and any other crates the advisory names) so `Cargo.lock` moves.

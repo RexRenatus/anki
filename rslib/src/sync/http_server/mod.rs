@@ -23,10 +23,10 @@ use axum::extract::DefaultBodyLimit;
 use axum::routing::get;
 use axum::Router;
 use axum_client_ip::ClientIpSource;
-use pbkdf2::password_hash::PasswordHash;
+use pbkdf2::password_hash::phc::PasswordHash;
+use pbkdf2::password_hash::phc::Salt;
 use pbkdf2::password_hash::PasswordHasher;
 use pbkdf2::password_hash::PasswordVerifier;
-use pbkdf2::password_hash::SaltString;
 use pbkdf2::Pbkdf2;
 use snafu::whatever;
 use snafu::OptionExt;
@@ -109,13 +109,13 @@ impl SimpleServerInner {
                             (
                                 name,
                                 // Plain text passwords provided; hash them with a fixed salt.
-                                Pbkdf2
-                                    .hash_password(
-                                        password.as_bytes(),
-                                        &SaltString::from_b64("tonuvYGpksNFQBlEmm3lxg").unwrap(),
-                                    )
-                                    .expect("couldn't hash password")
-                                    .to_string(),
+                                PasswordHasher::<PasswordHash>::hash_password_with_salt(
+                                    &Pbkdf2::default(),
+                                    password.as_bytes(),
+                                    &Salt::from_b64("tonuvYGpksNFQBlEmm3lxg").unwrap(),
+                                )
+                                .expect("couldn't hash password")
+                                .to_string(),
                             )
                         }
                     };
@@ -200,7 +200,7 @@ impl SimpleServer {
                 // Verify password
                 let pwhash =
                     &PasswordHash::new(&user.password_hash).expect("couldn't parse password hash");
-                if Pbkdf2
+                if Pbkdf2::default()
                     .verify_password(request.password.as_bytes(), pwhash)
                     .is_ok()
                 {
@@ -214,7 +214,7 @@ impl SimpleServer {
                 // then return an error
                 let pwhash =
                     &PasswordHash::new(&user.password_hash).expect("couldn't parse password hash");
-                let _ = Pbkdf2.verify_password(request.password.as_bytes(), pwhash);
+                let _ = Pbkdf2::default().verify_password(request.password.as_bytes(), pwhash);
                 None.or_forbidden("invalid user/pass in get_host_key")
             }
         }

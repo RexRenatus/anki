@@ -6,11 +6,11 @@ use std::marker::PhantomData;
 #[cfg(not(target_arch = "wasm32"))]
 use axum::body::Body;
 #[cfg(not(target_arch = "wasm32"))]
+use axum::http::HeaderName;
+#[cfg(not(target_arch = "wasm32"))]
 use axum::response::IntoResponse;
 #[cfg(not(target_arch = "wasm32"))]
 use axum::response::Response;
-#[cfg(not(target_arch = "wasm32"))]
-use axum_extra::headers::HeaderName;
 // wasm32 patch native-only-sync-server: the same http::HeaderName, reached through reqwest.
 #[cfg(target_arch = "wasm32")]
 use reqwest::header::HeaderName;
