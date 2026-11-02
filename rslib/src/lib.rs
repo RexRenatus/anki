@@ -50,6 +50,7 @@ pub mod timestamp;
 mod typeanswer;
 pub mod types;
 pub mod undo;
+mod unicode10;
 mod updates;
 pub mod version;
 
