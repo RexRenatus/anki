@@ -12,7 +12,6 @@
 //! from the published unic-ucd-category 0.9.0 crate's
 //! tables/general_category.rsv. Regenerate them with that script rather than
 //! editing them by hand.
-#![cfg_attr(not(test), allow(dead_code))]
 
 use std::cmp::Ordering;
 
@@ -964,33 +963,30 @@ pub(crate) fn is_mark(c: char) -> bool {
 
 #[cfg(test)]
 mod test {
-    use unic_ucd_category::GeneralCategory;
-
     use super::*;
 
+    /// The counts unic-ucd-category 0.9.0 gave while it was still a
+    /// dependency, plus three pinned cases.
     #[test]
-    fn unicode10_equals_unic_on_every_scalar_value() {
+    fn unicode10_counts() {
         let mut examined = 0u32;
         let mut assigned = 0u32;
         let mut mark = 0u32;
-        let mut unassigned_diff = 0u32;
-        let mut mark_diff = 0u32;
         for c in (0..=char::MAX as u32).filter_map(char::from_u32) {
             examined += 1;
-            let category = GeneralCategory::of(c);
-            let unic_unassigned = category == GeneralCategory::Unassigned;
-            let unic_mark = category.is_mark();
-            assigned += u32::from(!unic_unassigned);
-            mark += u32::from(unic_mark);
-            unassigned_diff += u32::from(is_unassigned(c) != unic_unassigned);
-            mark_diff += u32::from(is_mark(c) != unic_mark);
+            assigned += u32::from(!is_unassigned(c));
+            mark += u32::from(is_mark(c));
         }
-        println!(
-            "unicode10 examined={examined} assigned={assigned} mark={mark} \
-             unassigned_diff={unassigned_diff} mark_diff={mark_diff}"
-        );
+        println!("unicode10 examined={examined} assigned={assigned} mark={mark}");
         assert_eq!(examined, 1_112_064);
-        assert_eq!(unassigned_diff, 0, "is_unassigned differs from unic");
-        assert_eq!(mark_diff, 0, "is_mark differs from unic");
+        assert_eq!(assigned, 274_223);
+        assert_eq!(mark, 2_177);
+        // U+05F8 is unassigned, so it stays out of media filenames.
+        assert!(is_unassigned('\u{05F8}'));
+        // U+1F97A was assigned after Unicode 10.0.0; it stays disallowed.
+        assert!(is_unassigned('\u{1F97A}'));
+        // U+0301 COMBINING ACUTE ACCENT is an assigned mark.
+        assert!(!is_unassigned('\u{0301}'));
+        assert!(is_mark('\u{0301}'));
     }
 }

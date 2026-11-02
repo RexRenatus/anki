@@ -103,7 +103,6 @@ tempfile.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-unic-ucd-category.workspace = true
 unicase.workspace = true
 unicode-normalization.workspace = true
 zip.workspace = true

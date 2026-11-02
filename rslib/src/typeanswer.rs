@@ -6,7 +6,6 @@ use std::sync::LazyLock;
 
 use difflib::sequencematcher::SequenceMatcher;
 use regex::Regex;
-use unic_ucd_category::GeneralCategory;
 use unicode_normalization::char::is_combining_mark;
 use unicode_normalization::UnicodeNormalization;
 
@@ -137,11 +136,7 @@ fn render_tokens(tokens: &[DiffToken]) -> String {
 /// Prefixes a leading mark character with a non-breaking space to prevent
 /// it from joining the previous token.
 fn isolate_leading_mark(text: &str) -> Cow<'_, str> {
-    if text
-        .chars()
-        .next()
-        .is_some_and(|c| GeneralCategory::of(c).is_mark())
-    {
+    if text.chars().next().is_some_and(crate::unicode10::is_mark) {
         Cow::Owned(format!("\u{a0}{text}"))
     } else {
         Cow::Borrowed(text)
