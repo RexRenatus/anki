@@ -212,3 +212,77 @@ impl Backend {
         ThrottlingProgressHandler::new(self.progress_state.clone())
     }
 }
+
+/// The number of items rustls-pemfile 2.2.0's `read_all` yields for `pem`.
+#[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
+#[cfg_attr(not(test), allow(dead_code))]
+fn pem_item_count(_pem: &[u8]) -> usize {
+    0
+}
+
+#[cfg(all(test, feature = "rustls", not(target_arch = "wasm32")))]
+mod test {
+    use std::io::Cursor;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    use super::pem_item_count;
+
+    const BODY: &str = "AAECAwQF";
+
+    fn section(label: &str, body: &str) -> String {
+        format!("-----BEGIN {label}-----\n{body}\n-----END {label}-----\n")
+    }
+
+    /// The fixture rows: a label and the PEM text.
+    fn rows() -> Vec<(&'static str, String)> {
+        let cert = section("CERTIFICATE", BODY);
+        vec![
+            ("empty", String::new()),
+            ("one-certificate", cert.clone()),
+            ("two-certificates", format!("{cert}{cert}")),
+            (
+                "certificate-and-pkcs8-key",
+                format!("{cert}{}", section("PRIVATE KEY", BODY)),
+            ),
+            ("unknown-label", section("SOMETHING ELSE", BODY)),
+            ("echconfig", section("ECHCONFIG", BODY)),
+            ("malformed-base64", section("CERTIFICATE", "%%%%")),
+            (
+                "begin-without-end",
+                format!("-----BEGIN CERTIFICATE-----\n{BODY}\n"),
+            ),
+        ]
+    }
+
+    /// Runs `count` on its own thread: None when it has not returned within
+    /// 2 seconds, so a hang reads red rather than stuck.
+    fn within_deadline(count: impl FnOnce() -> usize + Send + 'static) -> Option<usize> {
+        let (tx, rx) = mpsc::channel();
+        thread::spawn(move || {
+            let _ = tx.send(count());
+        });
+        rx.recv_timeout(Duration::from_secs(2)).ok()
+    }
+
+    #[test]
+    fn pem_item_count_equals_rustls_pemfile() {
+        let rows = rows();
+        let mut differ = 0;
+        for (label, pem) in &rows {
+            let ours_in = pem.clone().into_bytes();
+            let theirs_in = pem.clone().into_bytes();
+            let ours = within_deadline(move || pem_item_count(&ours_in));
+            let theirs = within_deadline(move || {
+                rustls_pemfile::read_all(&mut Cursor::new(theirs_in)).count()
+            });
+            let same = ours.is_some() && ours == theirs;
+            println!("pem row={label} ours={ours:?} rustls_pemfile={theirs:?} same={same}");
+            differ += usize::from(!same);
+        }
+        println!("pem_item_count examined {} differ={differ}", rows.len());
+        assert_eq!(rows.len(), 8);
+        assert_eq!(differ, 0, "pem_item_count differs from rustls-pemfile");
+    }
+}
