@@ -153,9 +153,6 @@ impl Backend {
     // wasm32 backend has no rustls and no root certificates to add.
     #[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
     fn set_custom_certificate_inner(&self, cert_str: String) -> Result<()> {
-        use std::io::Cursor;
-        use std::io::Read;
-
         use reqwest::Certificate;
 
         let mut web_client = self.web_client.lock().unwrap();
@@ -165,7 +162,7 @@ impl Backend {
             return Ok(());
         }
 
-        if rustls_pemfile::read_all(Cursor::new(cert_str.as_bytes()).by_ref()).count() != 1 {
+        if pem_item_count(cert_str.as_bytes()) != 1 {
             return Err(AnkiError::InvalidCertificateFormat);
         }
 
@@ -210,5 +207,98 @@ impl Backend {
         &self,
     ) -> ThrottlingProgressHandler<P> {
         ThrottlingProgressHandler::new(self.progress_state.clone())
+    }
+}
+
+/// The number of items rustls-pemfile 2.2.0's `read_all` yields for `pem`,
+/// read with rustls-pki-types' PEM reader. Like `read_all`, it counts each
+/// section of a kind `read_all` returns and each error (which `read_all`
+/// yields as one item before reading on), and skips other sections, such as
+/// ECHCONFIG or an unknown label.
+#[cfg(all(feature = "rustls", not(target_arch = "wasm32")))]
+fn pem_item_count(pem: &[u8]) -> usize {
+    use rustls_pki_types::pem::SectionKind;
+
+    let mut rd = std::io::Cursor::new(pem);
+    let mut n = 0;
+    loop {
+        match rustls_pki_types::pem::from_buf(&mut rd) {
+            Ok(None) => return n,
+            Ok(Some((kind, _))) => match kind {
+                SectionKind::Certificate
+                | SectionKind::PublicKey
+                | SectionKind::RsaPrivateKey
+                | SectionKind::PrivateKey
+                | SectionKind::EcPrivateKey
+                | SectionKind::Crl
+                | SectionKind::Csr => n += 1,
+                _ => {}
+            },
+            Err(_) => n += 1,
+        }
+    }
+}
+
+#[cfg(all(test, feature = "rustls", not(target_arch = "wasm32")))]
+mod test {
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    use super::pem_item_count;
+
+    const BODY: &str = "AAECAwQF";
+
+    fn section(label: &str, body: &str) -> String {
+        format!("-----BEGIN {label}-----\n{body}\n-----END {label}-----\n")
+    }
+
+    /// The fixture rows: a label, the PEM text, and the count rustls-pemfile
+    /// 2.2.0's `read_all` gave for it while it was still a dependency.
+    fn rows() -> Vec<(&'static str, String, usize)> {
+        let cert = section("CERTIFICATE", BODY);
+        vec![
+            ("empty", String::new(), 0),
+            ("one-certificate", cert.clone(), 1),
+            ("two-certificates", format!("{cert}{cert}"), 2),
+            (
+                "certificate-and-pkcs8-key",
+                format!("{cert}{}", section("PRIVATE KEY", BODY)),
+                2,
+            ),
+            ("unknown-label", section("SOMETHING ELSE", BODY), 0),
+            ("echconfig", section("ECHCONFIG", BODY), 0),
+            ("malformed-base64", section("CERTIFICATE", "%%%%"), 1),
+            (
+                "begin-without-end",
+                format!("-----BEGIN CERTIFICATE-----\n{BODY}\n"),
+                1,
+            ),
+        ]
+    }
+
+    /// Runs `count` on its own thread: None when it has not returned within
+    /// 2 seconds, so a hang reads red rather than stuck.
+    fn within_deadline(count: impl FnOnce() -> usize + Send + 'static) -> Option<usize> {
+        let (tx, rx) = mpsc::channel();
+        thread::spawn(move || {
+            let _ = tx.send(count());
+        });
+        rx.recv_timeout(Duration::from_secs(2)).ok()
+    }
+
+    #[test]
+    fn pem_item_count_equals_rustls_pemfile() {
+        let rows = rows();
+        let mut differ = 0;
+        for (label, pem, golden) in rows.iter().cloned() {
+            let ours = within_deadline(move || pem_item_count(pem.as_bytes()));
+            let same = ours == Some(golden);
+            println!("pem row={label} ours={ours:?} rustls_pemfile={golden} same={same}");
+            differ += usize::from(!same);
+        }
+        println!("pem_item_count examined {} differ={differ}", rows.len());
+        assert_eq!(rows.len(), 8);
+        assert_eq!(differ, 0, "pem_item_count differs from rustls-pemfile");
     }
 }
