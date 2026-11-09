@@ -57,8 +57,7 @@ impl crate::services::AnkidroidService for Collection {
         input: generic::String,
     ) -> error::Result<generic::StringList> {
         let stmt = self.storage.db.prepare(&input.val)?;
-        let names = stmt.column_names();
-        let names: Vec<_> = names.iter().map(ToString::to_string).collect();
+        let names: Vec<_> = stmt.column_names().map(ToString::to_string).collect();
         Ok(names.into())
     }
 

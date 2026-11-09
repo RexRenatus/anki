@@ -80,7 +80,7 @@ impl Collection {
 /// engine installs as SQLite's default. The lock is exclusive, as the collection's own is.
 #[cfg(target_arch = "wasm32")]
 fn serialized_collection(col_path: &std::path::Path) -> Result<Vec<u8>> {
-    let db = rusqlite::Connection::open(col_path)?;
+    let mut db = rusqlite::Connection::open(col_path)?;
     db.pragma_update(None, "locking_mode", "exclusive")?;
     let data = db.serialize(rusqlite::MAIN_DB)?;
     Ok(data.to_vec())
